@@ -162,3 +162,316 @@ time;</br>
 datetime;</br>
 timestamp;</br>
 year;</br>
+
+## 数据库
+
+### 关系型数据库的范式
+
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/dc1ac864ba2f4648926728dff0a7850c~tplv-k3u1fbpfcp-watermark.image)
+
+#### 第一范式1NF 
+
+**定义：**
+
+字段不可再分。
+
+
+
+#### 第二范式2NF:
+
+**定义：**
+
+在1NF的基础上，要有键(键可由多个字段组合)；</br>
+所有字段分别完全依赖于键；</br>
+如果键子多个字段组合，则不允许部分依赖于该键；
+
+**依赖关系：**
+
+给出键，就能唯一确定字段的值；</br>
+例如给出学号，就能唯一确定姓名，反之则不行；</br>
+则称姓名依赖于学号
+
+![](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/91d51acc9bee41658f9f4c2375a0f558~tplv-k3u1fbpfcp-watermark.image)
+
+#### 第三范式3NF：
+
+**定义：**
+
+一个表里不能有两层依赖；</br>
+给出学号，就能确定系名：系名依赖于学号；</br>
+给出系名，就能确定系主任：系主任依赖于系名；</br>
+
+![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/babcc70414fc438d959e4154c57851ad~tplv-k3u1fbpfcp-watermark.image)
+
+### 总结：
+
+**第一范式** 
+
+属性不可分割
+
+**第二范式** 
+
+字段完全依赖于键
+
+**第三范式**
+
+字段没有间接依赖于键
+
+**BC范式**
+
+键中的属性也不存在间接依赖
+
+## 数据库设计经验 
+
+**高内聚：**
+
+把相关的字段放到一起，不相关的分开建表；
+如果两个字段能够单独建表，那就单独建表；
+
+**低耦合：**
+
+如果两个表之间有弱关系；</br>
+一对一可放在一个表，也可两个表加外键；</br>
+一对多一般用在外键；</br>
+多对多一般建中间表；
+
+### MySQL存储引擎
+
+命令 SHOW ENGLINES；
+
+**常见的**
+
+* InnDB-默认，目前版本是新版InnDB;</br>
+* MyISAM-拥有较高的;</br>
+* Memory-内存中，快速访问数据;</br>
+* Archive-只支持insert和select;</br>
+
+**InnoDB**
+
+InnoDB是事务性数据库的首选，支持事务、遵循ACID，支持行锁和外键。
+
+
+###  Stream
+
+**Stream-流：**
+
+![](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d94f5973cded4493ac597b82bb8d581d~tplv-k3u1fbpfcp-watermark.image)
+
+stream是水流，但默认的是没有水；</br>
+stream.write可以让水流中有水(数据)；</br>
+每次写的小数据叫做chunk(块)；</br>
+产生数据的一段叫做source(源头)；</br>
+得到数据的一段叫做sink(水池)</br>
+
+### 管道：
+
+两个流可以用一个管道相连，stream的末尾连接上stream2的开端。只要stream1有数据，就会流到stream2中。
+
+常见代码：</br>
+`stream.pipe(stream2)`
+
+链式操作：</br>
+
+`a.pipe(b).pipe(c)等价于a.pipe(b),b.pipe(c)`
+
+![](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/c6c38fb418f44cbe9c3cc3a43d1d94c8~tplv-k3u1fbpfcp-watermark.image)
+
+
+**管道可以通过时间实现：**
+
+```
+// stream1 一有数据就塞给 stream2
+stream1.on('data',(chunk)=>{
+   stream2.write(chunk)
+})
+//stream1 停了，就停掉stream2
+stream1.on('end',()=>{
+   stream2.end()
+})
+```
+
+**Stream对象的原型链：**
+
+`s = fs.createReadStream(path)`
+
+那么它的对象层级为：</br>
+自身属性(由`fs.ReadStream`构造)；</br>
+原型：`stream.Readable.prototype`;</br>
+二级原型：`stream.Stream.prototype ` ；</br>
+三级原型：` events.EventEmitter.prototype `；</br>
+四级原型：` Object.prototype ` ；</br>
+
+Stream对象都继承了EventEmitter;</br>
+
+**支持的事件和方法**
+
+![](https://p6-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/738c1cca504e481a9026b613b87d9094~tplv-k3u1fbpfcp-watermark.image) 
+
+### Readable Stream
+
+**静止态paused和流动态flowing**
+
+* 默认处于paused态;</br>
+* 添加data事件监听，它就变为flowing态;</br>
+* 删掉data事件监听，它就变为paused态;</br>
+* pause()可以将它变为paused;</br>
+* resume()可以将它变为flowing;</br>
+
+### Writable Stream
+
+**drain流干了事件**
+
+表示可以加点水（加入事件），我们调用stream.wrote(chunk)的时候，可能会得到false，意思是书写太快，数据被积压了。这个时候就不能继续write,需要监听drain.等drain事件触发了，才能继续write.
+
+**finish事件**
+
+调用stream.end()之后，而且缓冲区数据都已经传给底层系统之后，触发finish事件。
+
+### 创建一个Wirtable Stream
+
+```
+const { writeable } = require("stream");
+
+const outStream = new Writeable({
+   write( chunk,encoding,callback) {
+     console.log(chunk.toString());
+     callback();
+   }
+});
+
+process.stdin.pipe(outStream);
+//保存文件为 writable.js,然后用node运行
+//不管你输入什么，都会得到相同的结果
+```
+
+### 创建一个Readable Stream
+
+```
+const { Writeable } = require("stream");
+
+cosnt outStream = new Writeable({
+  write(chunk,encoding,callback) {
+    console.log(chunk.toString());
+    callback();
+  }
+});
+
+process.stdin.pipe(outStream);
+
+//保存文件为writable.js,然后用node运行；
+//不管你输入什么，都会得到相同的结果
+```
+
+### 创建一个Duplex Stream
+
+```
+const { Readable } =require("stream");
+
+const inStream = new Readable();
+
+inStream.push("ABCDEFGHIJKLM");
+inStream.push("NOPQRSTUVWXYZ");
+
+inStream.push(null); // No more data
+
+inStream.pipe(process.stdout);
+
+// 保存文件为readable.js 然后用node 运行
+// 先把所有数据都push进去，然后pipe
+```
+```
+const { Readable } = require("stream");
+
+const inStream = new Rendable({
+  read(size) {
+  this.push(String.fromCharCode(this.currentCharCode++));
+    if (this.currentCharCode > 90){
+      this.push(null);
+     }
+   }
+ });
+ 
+ inStream.currentCharCode = 65
+ 
+ inStream.pipe(process.stdout)
+ //保存文件为readable2.js 然后用node运行
+ //这次的数据是按需供给的，对方调用read才会给一次数据
+```
+
+### 创建一个Duplex Stream
+
+```
+const { Duplex } = require("stream");
+
+const inoutStream = new Duplex({
+  write(chunk,encoding,callback){
+     console.log(chunk.toString());
+     callback();
+  },
+  
+  read(size) {
+   this.push(String.fromCharCode(this.currentCharCode++));
+     if (this.currentCharCode > 90) {
+        this.push(null);
+     }
+  }
+});
+
+inoutStream.currentCharCode = 65;
+
+process.stdin.pipe(inooutStream).pipe(process.stdout);
+
+
+```
+
+
+### 创建一个Transform Stream
+
+```
+const {Transform } = require("stream");
+
+const upperCaseTr = new Transform({
+   transform(chunk,encoding,callback) {
+      this.push(chunk.toString().toUpperCase());
+      callback();
+     }
+});
+
+process.stdin.pipe(upperCaseTr).pipe(process.stdout);
+
+
+```
+
+### 内置的Transform Stream
+
+```
+
+const fs = require("fs");
+const zlib = require("zlib");
+const fike = process.argv[2];
+
+fs.createReadStream(file)
+.pipe(zlib.createGzip())
+.pipe(fs.createWriteStream(file + ".gz"));
+```
+
+```
+const fs = require("fs");
+const zlib = require("zlib");
+const fike = process.argv[2];
+
+fs.createReadStream(file)
+   .pipe(zlib.createGzip())
+   .on("data",() => process.stdout.write("."))
+   .pipe(fs.createWriteStream(file + ".zz"))
+   .on("finish",() => console.log("Done"));
+```
+
+### Node.js中的Stream
+
+![](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/4ad2f714c63643c0aa36b9afc98d5e9b~tplv-k3u1fbpfcp-watermark.image)
+
+<a href="https://juejin.cn/post/6844903635617316877">面试高级前端工程师必问之流-stream </a>
+
+
+
