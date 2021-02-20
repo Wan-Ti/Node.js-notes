@@ -475,3 +475,109 @@ fs.createReadStream(file)
 
 
 
+## child_process
+
+### 进程
+
+**场景：**
+
+notepad.exe是一个程序，不是进程；</br>
+双击notepad.exe时，操作系统会开启一个进程；
+
+**定义：**
+
+进程是程序的执行实例；</br>
+程序在CPU上执行时的活动叫做进程；</br>
+
+**特点：**
+
+一个进程可以创建另一个进程(父进程与子进程);</br>
+通过任务管理器可以看到进程；
+
+**进程的两个状态**
+
+![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/fd5d8fb781ea4506b53cd86fb1faaff9~tplv-k3u1fbpfcp-watermark.image)
+
+![](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/3a4003db91ff4a2eb7a066aeada73b0b~tplv-k3u1fbpfcp-watermark.image)
+
+**阻塞(se)**
+
+等待执行的进程中：
+
+都是非运行态；</br>
+一些(A)在等待CPU资源；</br>
+另一些(B)在等待I/O完成；</br>
+如果这个时候把CPU分配给B进程，B还是在等I/O；</br>
+我们把B叫做阻塞进程；</br>
+因此，分配程序只会把SPU分配给非阻塞进程；</br>
+                           
+**进程的三个状态：**
+
+![](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/113e2450e7534c73a42ae2c4790bcd94~tplv-k3u1fbpfcp-watermark.image)
+
+![](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/eeeb42d0c786479c92bcdb473c1a30ad~tplv-k3u1fbpfcp-watermark.image)
+
+
+### 线程Thread
+
+在面向进程设计的系统，进程是程序的基本执行实体；</br>
+在面向线程设计的系统中，进程本身不是基本运行单位，而是线程的容器。</br>
+
+**概念：**
+
+CPU调度和执行的最小单元；</br>
+一个进程中至少有一个线程，可以有多个线程；</br>
+一个进程中的线程共享该进程的所有资源；</br>
+进程的第一个线程叫做初始化线程；</br>
+线程的调度可以由操作系统负责，也可以用户在即负责；</br>
+
+**举例：**
+
+浏览器进程里面由渲染引擎、V8引擎、存储模块，网络模块，用户界面模块等；</br>
+每个模块都可以放在一个线程里；</br>
+
+
+**分析：**
+
+子进程V.S.线程
+
+#### child_process
+
+用于新建子进程  
+
+**使用目的：**
+
+子进程的运行结果储存在系统缓存之中(最大200kb);</br>
+等到子进程运行结束以后，主进程再用回调函数读取子进程的运行结果；</br>
+
+**使用流:**
+
+```
+var exec = require('child_process').exec;
+var child = exec('ls -1');
+
+child.stdout.on('data',function(data) {
+  console.log('stdout: ' + data);
+});
+child.stdeer.on('data',function(data) {
+  console.log('stdout: ' +data);
+});
+child.on('close',function(code) {
+  console.log('closing code: ' +code);
+});
+```
+
+#### options
+
+**常用的选项：**
+
+* cwd - Current working directory;</br>
+* env - 环境变量;</br>
+* shell - 用什么shell;</br>
+* maxBuffer - 最大缓存，默认1024 * 1024字节;</br>
+
+
+
+### Node.js的线程控制
+
+### Node.js的进程控制
